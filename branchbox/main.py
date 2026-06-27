@@ -9,6 +9,8 @@ import cairo
 import json
 import math
 import subprocess
+import shlex
+import shutil
 import sys
 import uuid
 from pathlib import Path
@@ -798,11 +800,102 @@ class DeskTree(Gtk.Window):
 
         return False
 
-    def open_item(self, node, close_after=False):
-        path = str(node.path)
+    def parse_desktop_file(self, path):
+        data = {}
 
         try:
-            if path.lower().endswith(".exe"):
+            in_desktop_entry = False
+
+            for raw_line in Path(path).read_text(errors="ignore").splitlines():
+                line = raw_line.strip()
+
+                if not line or line.startswith("#"):
+                    continue
+
+                if line.startswith("[") and line.endswith("]"):
+                    in_desktop_entry = line == "[Desktop Entry]"
+                    continue
+
+                if not in_desktop_entry or "=" not in line:
+                    continue
+
+                key, value = line.split("=", 1)
+                data[key.strip()] = value.strip()
+        except Exception:
+            pass
+
+        return data
+
+    def clean_desktop_exec(self, command):
+        # Remove freedesktop Exec field codes so copied launchers run as commands.
+        # Examples: %f, %F, %u, %U, %i, %c, %k.
+        for code in [
+            "%f", "%F", "%u", "%U", "%d", "%D", "%n", "%N",
+            "%i", "%c", "%k", "%v", "%m", "%%"
+        ]:
+            command = command.replace(code, "")
+
+        return " ".join(command.split()).strip()
+
+    def open_desktop_launcher(self, path):
+        data = self.parse_desktop_file(path)
+        exec_line = self.clean_desktop_exec(data.get("Exec", ""))
+        working_dir = data.get("Path", "").strip() or None
+        terminal = data.get("Terminal", "false").strip().lower() == "true"
+
+        if not exec_line:
+            subprocess.Popen(["xdg-open", str(path)])
+            return
+
+        command = exec_line
+
+        if working_dir:
+            command = f"cd {shlex.quote(working_dir)} && {command}"
+
+        if terminal:
+            terminal_program = None
+
+            for candidate in [
+                "x-terminal-emulator",
+                "gnome-terminal",
+                "mate-terminal",
+                "xfce4-terminal",
+                "konsole",
+                "xterm",
+            ]:
+                found = shutil.which(candidate)
+                if found:
+                    terminal_program = found
+                    break
+
+            if terminal_program:
+                name = Path(terminal_program).name
+
+                if name == "gnome-terminal":
+                    subprocess.Popen([terminal_program, "--", "bash", "-lc", command])
+                elif name == "mate-terminal":
+                    subprocess.Popen([terminal_program, "--", "bash", "-lc", command])
+                elif name == "xfce4-terminal":
+                    subprocess.Popen([terminal_program, "--command", f"bash -lc {shlex.quote(command)}"])
+                elif name == "konsole":
+                    subprocess.Popen([terminal_program, "-e", "bash", "-lc", command])
+                elif name == "xterm":
+                    subprocess.Popen([terminal_program, "-e", "bash", "-lc", command])
+                else:
+                    subprocess.Popen([terminal_program, "-e", "bash", "-lc", command])
+            else:
+                subprocess.Popen(["bash", "-lc", command])
+        else:
+            subprocess.Popen(["bash", "-lc", command])
+
+    def open_item(self, node, close_after=False):
+        path = str(node.path)
+        lower_path = path.lower()
+
+        try:
+            if lower_path.endswith(".desktop"):
+                self.open_desktop_launcher(path)
+            elif lower_path.endswith(".exe"):
                 subprocess.Popen(["wine", path])
             else:
                 subprocess.Popen(["xdg-open", path])

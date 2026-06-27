@@ -2,45 +2,37 @@
 
 DISCLAIMER: AI GENERATED
 
-BranchBox is a Linux desktop visual file-tree launcher for Cinnamon/Nemo.
+BranchBox is a Linux Mint Cinnamon/Nemo utility that creates visual file-tree launcher boxes on the desktop.
 
-A `.branchbox` file acts like a special desktop item. When opened, it displays a borderless visual tree of hidden stored files. Folders are used as hidden branch points. Only files display as clickable icons.
+A `.branchbox` file acts like a special desktop item. When opened, it shows a borderless visual tree of files stored in a hidden per-instance folder.
 
 ## Features
 
-- Create multiple `.branchbox` items
-- Each item has its own hidden storage folder
-- Hidden contents are stored under `~/.local/share/branchbox/instances/<id>/items`
-- Right-click Desktop or inside a folder to create a BranchBox
+- Create BranchBox items from the Nemo right-click menu
+- Each `.branchbox` file has its own hidden storage folder
+- Multiple independent BranchBoxes are supported
 - Empty BranchBoxes open directly to their storage folder
-- Double-click displayed files to open them
+- Folder structure appears as branch lines instead of folder icons
+- Files display as clickable icons
+- Double-click files to open them
+- `.desktop` launchers are parsed and launched correctly, including terminal launchers
 - `.exe` files launch through Wine
-- Editable morphed background, opacity, fade, text color, and text backing
-- Borderless window opens from the clicked icon position
-- If a `.branchbox` file is deleted, stored contents are moved to `~/Desktop/Recovered BranchBoxes`
-
-## Requirements
-
-Linux Mint Cinnamon/Nemo is the intended environment.
-
-Install dependencies:
-
-```bash
-sudo apt update
-sudo apt install -y python3-gi gir1.2-gtk-3.0 gir1.2-gdkpixbuf-2.0 python3-cairo python3-gi-cairo xdg-utils wine nemo shared-mime-info desktop-file-utils
-```
+- Custom editable appearance settings
+- Morphed background fade around icons and branch lines
+- Window closes when focus is lost
+- Trash-based cleanup for deleted BranchBox launchers
+- Workspace/icon-moving systems are supported because missing files are not treated as deleted
 
 ## Install
 
-From inside the extracted BranchBox folder:
-
 ```bash
+sudo apt install -y python3-gi gir1.2-gtk-3.0 gir1.2-gdkpixbuf-2.0 python3-cairo python3-gi-cairo xdg-utils wine nemo shared-mime-info desktop-file-utils
 ./install.sh
 ```
 
 ## Create a BranchBox
 
-Right-click the Desktop or inside a folder, then choose:
+Right-click the Desktop or inside a folder and choose:
 
 ```text
 Create BranchBox
@@ -56,19 +48,49 @@ You can rename it.
 
 ## Add files
 
-Double-click the new `.branchbox` file. If it is empty, it opens the storage folder.
+Open the BranchBox. If it is empty, it opens directly to its hidden storage folder.
 
-Put files and folders inside that storage folder.
+You can also right-click inside the BranchBox and choose:
+
+```text
+Open Storage Folder
+```
+
+Place files and folders in that folder.
 
 Folders become branch structure. Files become visible clickable items.
 
-## Edit appearance
+## Where files are stored
 
-Open a non-empty BranchBox, then right-click the background:
+BranchBox launcher files are visible wherever you create them, usually on the Desktop:
 
 ```text
-Edit Appearance
+~/Desktop/New BranchBox.branchbox
 ```
+
+The actual stored files are hidden under:
+
+```text
+~/.local/share/branchbox/instances/<id>/items
+```
+
+The registry is stored here:
+
+```text
+~/.local/share/branchbox/registry.json
+```
+
+## Trash cleanup behavior
+
+BranchBox does not treat a missing launcher path as deletion. This prevents workspace managers that move icons around from emptying BranchBoxes.
+
+If a registered `.branchbox` launcher is actually moved to Trash, BranchBox recovers its hidden contents to:
+
+```text
+~/Desktop/Recovered BranchBoxes
+```
+
+Then it removes that instance from the BranchBox registry.
 
 ## Uninstall
 
@@ -76,16 +98,10 @@ Edit Appearance
 ./uninstall.sh
 ```
 
-The uninstaller removes the app, MIME registration, icon, Nemo action, and cleanup watcher.
+The uninstaller removes the app, MIME registration, icon, Nemo right-click action, and cleanup watcher.
 
 It does not delete stored BranchBox contents unless you manually remove:
 
 ```bash
-rm -rf "$HOME/.local/share/branchbox"
+~/.local/share/branchbox
 ```
-
-## Current default appearance
-
-The default appearance uses the uploaded `New BranchBox.branchbox` settings: very low morph background opacity, white text, and no file-name text backing.
-
-BranchBox also closes automatically when it loses focus, such as when the user clicks the desktop or another window.

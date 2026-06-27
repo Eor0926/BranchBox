@@ -12,9 +12,9 @@ INSTANCES_DIR="$DATA_DIR/instances"
 APPLICATIONS_DIR="$HOME/.local/share/applications"
 MIME_DIR="$HOME/.local/share/mime/packages"
 NEMO_ACTIONS_DIR="$HOME/.local/share/nemo/actions"
-AUTOSTART_DIR="$HOME/.config/autostart"
 ICON_APP_DIR="$HOME/.local/share/icons/hicolor/scalable/apps"
 ICON_MIME_DIR="$HOME/.local/share/icons/hicolor/scalable/mimetypes"
+AUTOSTART_DIR="$HOME/.config/autostart"
 
 mkdir -p "$APP_DIR"
 mkdir -p "$DATA_DIR"
@@ -22,9 +22,13 @@ mkdir -p "$INSTANCES_DIR"
 mkdir -p "$APPLICATIONS_DIR"
 mkdir -p "$MIME_DIR"
 mkdir -p "$NEMO_ACTIONS_DIR"
-mkdir -p "$AUTOSTART_DIR"
 mkdir -p "$ICON_APP_DIR"
 mkdir -p "$ICON_MIME_DIR"
+mkdir -p "$AUTOSTART_DIR"
+
+# Restart the cleanup watcher. This version only reacts to .branchbox files
+# that are actually in Trash; it does not treat temporarily moved files as deleted.
+pkill -f "branchbox_cleaner.py --loop" >/dev/null 2>&1 || true
 
 rm -rf "$APP_DIR/branchbox"
 cp -r "$PROJECT_DIR/branchbox" "$APP_DIR/branchbox"
@@ -84,15 +88,19 @@ Selection=none
 Extensions=any;
 EOF_ACTION
 
+
 cat > "$AUTOSTART_DIR/branchbox-cleaner.desktop" <<EOF_AUTOSTART
 [Desktop Entry]
 Type=Application
 Name=BranchBox Cleaner
-Comment=Recover hidden BranchBox contents when a BranchBox file is deleted
+Comment=Recover hidden BranchBox contents when a BranchBox launcher is moved to Trash
 Exec=python3 $APP_DIR/branchbox/branchbox_cleaner.py --loop
 Terminal=false
 X-GNOME-Autostart-enabled=true
 EOF_AUTOSTART
+
+pkill -f "branchbox_cleaner.py --loop" >/dev/null 2>&1 || true
+nohup python3 "$APP_DIR/branchbox/branchbox_cleaner.py" --loop >/dev/null 2>&1 &
 
 # Remove earlier test/dev install leftovers.
 rm -f "$HOME/Templates/DeskTree.desktree"
@@ -100,6 +108,7 @@ rm -f "$HOME/Templates/Branch Box.branchbox"
 rm -f "$HOME/.local/share/nemo/actions/create_branch_box.nemo_action"
 rm -f "$HOME/.local/share/applications/desktree.desktop"
 rm -f "$HOME/.local/share/mime/packages/desktree.xml"
+rm -rf "$HOME/.local/share/desktree/app"
 
 update-mime-database "$HOME/.local/share/mime" >/dev/null 2>&1 || true
 gtk-update-icon-cache "$HOME/.local/share/icons/hicolor" >/dev/null 2>&1 || true
@@ -107,9 +116,6 @@ update-desktop-database "$APPLICATIONS_DIR" >/dev/null 2>&1 || true
 
 xdg-mime default branchbox.desktop application/x-branchbox || true
 gio mime application/x-branchbox branchbox.desktop >/dev/null 2>&1 || true
-
-pkill -f "branchbox_cleaner.py --loop" >/dev/null 2>&1 || true
-nohup python3 "$APP_DIR/branchbox/branchbox_cleaner.py" --loop >/dev/null 2>&1 &
 
 nemo -q >/dev/null 2>&1 || true
 
@@ -122,6 +128,9 @@ Right-click Desktop or inside a folder, then choose:
 Each BranchBox file stores its contents under:
   $INSTANCES_DIR/<unique-id>/items
 
-Deleted BranchBox contents recover to:
-  $HOME/Desktop/Recovered BranchBoxes
+Note:
+  This build uses Trash detection for cleanup.
+  Moving .branchbox files between workspaces will not empty them.
+  If a .branchbox file is moved to Trash, its stored contents recover to:
+    $HOME/Desktop/Recovered BranchBoxes
 EOF_DONE

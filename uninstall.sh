@@ -22,7 +22,7 @@ update-desktop-database "$HOME/.local/share/applications" >/dev/null 2>&1 || tru
 nemo -q >/dev/null 2>&1 || true
 
 cat <<EOF_DONE
-Removed BranchBox app files, MIME type, icon, Nemo action, and cleanup watcher.
+Removed BranchBox app files, MIME type, icon, and Nemo action.
 
 Stored BranchBox contents were NOT deleted:
   $HOME/.local/share/branchbox/instances
